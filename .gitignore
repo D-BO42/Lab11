@@ -1,0 +1,8 @@
+*.d
+*.o
+mandel
+*.jpg
+*.mpg
+
+*:Zone.Identifier
+*:sec.endpointdlp
