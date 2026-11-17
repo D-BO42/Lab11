@@ -10,7 +10,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "jpegrw.h"
-
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <string.h>
 // local routines
 static int iteration_to_color( int i, int max );
 static int iterations_at_point( double x, double y, int max );
@@ -21,11 +24,13 @@ static void show_help();
 
 int main( int argc, char *argv[] )
 {
+	int images = 50;
 	char c;
-
+	int children;
+	children = 13;
 	// These are the default configuration values used
 	// if no command line arguments are given.
-	const char *outfile = "mandel.jpg";
+	char outfile[50] = "mandel.jpg";
 	double xcenter = 0;
 	double ycenter = 0;
 	double xscale = 4;
@@ -37,7 +42,7 @@ int main( int argc, char *argv[] )
 	// For each command line argument given,
 	// override the appropriate configuration value.
 
-	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h"))!=-1) {
+	while((c = getopt(argc,argv,"x:y:s:W:H:m:o:h:c:"))!=-1) {
 		switch(c) 
 		{
 			case 'x':
@@ -59,15 +64,43 @@ int main( int argc, char *argv[] )
 				max = atoi(optarg);
 				break;
 			case 'o':
-				outfile = optarg;
+				strcpy(optarg, outfile);
 				break;
 			case 'h':
 				show_help();
 				exit(1);
 				break;
+			case 'c':
+				children = atoi(optarg);
+				break;
 		}
 	}
+    
+	int ch = 0; //child num 0 is parent
+	pid_t pid = 1;
+	
+	for(int i = 0; i< children; i ++) {
+		if(pid != 0) {
+			pid = fork();
+		}
+		if(pid == 0) {
+			ch = i + 1;
+			break;
+		}
+	}
+    int workers = children + 1; // children plus the parent
+	int base = images / workers;
+	int rem = images % workers;
 
+	int start = ch * base + (ch < rem ? ch : rem);
+	int count = base + (ch < rem ? 1 : 0);
+
+	for (int i = start; i < start + count; i++) {
+    // generate image i
+
+		//change x scale to scale the images
+		xscale = 2 + 0.1*i;
+		snprintf(outfile, sizeof(outfile), "mandel%d.jpg", i);
 	// Calculate y scale based on x scale (settable) and image sizes in X and Y (settable)
 	yscale = xscale / image_width * image_height;
 
@@ -88,7 +121,7 @@ int main( int argc, char *argv[] )
 
 	// free the mallocs
 	freeRawImage(img);
-
+    }
 	return 0;
 }
 
